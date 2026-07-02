@@ -13,6 +13,7 @@ multi-language first-party detection.
 |---|---|---|
 | Go | `go.mod` | package import path |
 | Rust | `Cargo.toml` | crate |
+| Swift | `Package.swift` | SwiftPM target/module |
 | JVM (Java/Kotlin/Scala) | `pom.xml` / Gradle / sbt / Mill | declared package |
 | C# | `.sln` / `.csproj` / SDK markers | namespace |
 | PHP | `composer.json` | namespace (`\`-separated) |

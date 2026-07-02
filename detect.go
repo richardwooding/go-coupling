@@ -36,6 +36,8 @@ func adapterFor(root string) adapter {
 		return &goAdapter{}
 	case fileExists(filepath.Join(root, "Cargo.toml")):
 		return &rustAdapter{}
+	case fileExists(filepath.Join(root, "Package.swift")):
+		return &swiftAdapter{}
 	case hasAnyFile(root,
 		"pom.xml",
 		"build.gradle", "build.gradle.kts", "settings.gradle", "settings.gradle.kts",

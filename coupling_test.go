@@ -133,6 +133,50 @@ func TestRustCrateCoupling(t *testing.T) {
 	mustCoupling(t, cs, "app", 0, 1)
 }
 
+func TestSwiftModuleCoupling(t *testing.T) {
+	root := t.TempDir()
+	write(t, filepath.Join(root, "Package.swift"),
+		"// swift-tools-version:5.9\nimport PackageDescription\n"+
+			"let package = Package(name: \"App\", targets: [\n"+
+			"  .executableTarget(name: \"App\", dependencies: [\"Svc\", \"Util\"]),\n"+
+			"  .target(name: \"Svc\", dependencies: [\"Util\"]),\n"+
+			"  .target(name: \"Util\"),\n"+
+			"])\n")
+	// Source files under the conventional Sources/<Target>/ layout.
+	write(t, filepath.Join(root, "Sources", "App", "main.swift"), "import Svc\nimport Util\nimport Foundation\n")
+	write(t, filepath.Join(root, "Sources", "Svc", "Svc.swift"), "import Util.Networking\n")
+	write(t, filepath.Join(root, "Sources", "Util", "Util.swift"), "import Foundation\n")
+	files := []coupling.File{
+		{Path: filepath.Join(root, "Sources", "App", "main.swift"), Language: "swift", Imports: []string{"Svc", "Util", "Foundation"}},
+		{Path: filepath.Join(root, "Sources", "Svc", "Svc.swift"), Language: "swift", Imports: []string{"Util.Networking"}},
+		{Path: filepath.Join(root, "Sources", "Util", "Util.swift"), Language: "swift", Imports: []string{"Foundation"}},
+	}
+	cs := coupling.Analyze(root, files)
+	// Foundation is external → ignored; Util.Networking resolves to module Util.
+	mustCoupling(t, cs, "Util", 2, 0) // imported by App and Svc
+	mustCoupling(t, cs, "Svc", 1, 1)  // imported by App; imports Util
+	mustCoupling(t, cs, "App", 0, 2)  // imports Svc and Util
+}
+
+func TestSwiftExplicitPath(t *testing.T) {
+	root := t.TempDir()
+	// A target whose sources live outside Sources/ via an explicit path:.
+	write(t, filepath.Join(root, "Package.swift"),
+		"let package = Package(name: \"P\", targets: [\n"+
+			"  .target(name: \"Core\", path: \"custom/core\"),\n"+
+			"  .target(name: \"Api\", dependencies: [\"Core\"]),\n"+
+			"])\n")
+	write(t, filepath.Join(root, "custom", "core", "c.swift"), "import Foundation\n")
+	write(t, filepath.Join(root, "Sources", "Api", "a.swift"), "import Core\n")
+	files := []coupling.File{
+		{Path: filepath.Join(root, "custom", "core", "c.swift"), Language: "swift", Imports: []string{"Foundation"}},
+		{Path: filepath.Join(root, "Sources", "Api", "a.swift"), Language: "swift", Imports: []string{"Core"}},
+	}
+	cs := coupling.Analyze(root, files)
+	mustCoupling(t, cs, "Core", 1, 0)
+	mustCoupling(t, cs, "Api", 0, 1)
+}
+
 func TestNoManifest(t *testing.T) {
 	root := t.TempDir() // empty: falls back to Go adapter, no go.mod → not analysable
 	files := []coupling.File{{Path: filepath.Join(root, "a.go"), Language: "go", Imports: []string{"x"}}}

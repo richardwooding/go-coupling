@@ -10,7 +10,8 @@
 // package for each file.
 //
 // The ecosystem is detected from the build manifest at the project root —
-// go.mod (Go packages), Cargo.toml (Rust crates), Maven/Gradle/sbt (JVM
+// go.mod (Go packages), Cargo.toml (Rust crates), Package.swift (SwiftPM
+// target modules), Maven/Gradle/sbt (JVM
 // packages), .sln/.csproj (C# namespaces), a Python manifest (packages),
 // package.json/tsconfig.json (JS/TS directory modules), a Perl dist manifest
 // (:: packages), Gemfile/*.gemspec (Ruby directory modules), and
