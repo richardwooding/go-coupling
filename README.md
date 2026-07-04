@@ -2,6 +2,8 @@
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/richardwooding/go-coupling.svg)](https://pkg.go.dev/github.com/richardwooding/go-coupling)
 
+**Website:** [richardwooding.github.io/go-coupling](https://richardwooding.github.io/go-coupling/)
+
 Robert C. Martin's package-coupling metrics — **afferent coupling (Ca)**,
 **efferent coupling (Ce)**, **instability (I = Ce/(Ca+Ce))** — plus **circular
 dependency** detection, across **9 language ecosystems**.
