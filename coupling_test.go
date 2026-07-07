@@ -74,6 +74,47 @@ func TestGoCoupling(t *testing.T) {
 	}
 }
 
+func TestFileCoupling(t *testing.T) {
+	// Path-based ecosystem (Go): each file's profile is its directory node's.
+	root := t.TempDir()
+	write(t, filepath.Join(root, "go.mod"), "module example.com/m\n\ngo 1.23\n")
+	aPath := filepath.Join(root, "a", "a.go")
+	cPath := filepath.Join(root, "c", "c.go")
+	files := []coupling.File{
+		{Path: aPath, Language: "go", Imports: []string{"example.com/m/b"}},
+		{Path: filepath.Join(root, "b", "b.go"), Language: "go", Imports: []string{"fmt"}},
+		{Path: cPath, Language: "go", Imports: []string{"example.com/m/a", "example.com/m/b"}},
+	}
+	fc := coupling.Build(root, files).FileCoupling()
+	if c, ok := fc[cPath]; !ok || c.Afferent != 0 || c.Efferent != 2 {
+		t.Errorf("c.go coupling = %+v ok=%v, want Ca=0 Ce=2", c, ok)
+	}
+	if c, ok := fc[aPath]; !ok || c.Afferent != 1 || c.Efferent != 1 {
+		t.Errorf("a.go coupling = %+v ok=%v, want Ca=1 Ce=1", c, ok)
+	}
+
+	// Declaration-based ecosystem (Java): key echoes the Path given verbatim,
+	// and files in the same package share one node's profile.
+	jroot := t.TempDir()
+	write(t, filepath.Join(jroot, "pom.xml"), "<project/>\n")
+	jfiles := []coupling.File{
+		{Path: "X.java", Language: "java", Package: "com.app.web", Imports: []string{"com.app.core.Service"}},
+		{Path: "Y.java", Language: "java", Package: "com.app.core"},
+		{Path: "Z.java", Language: "java", Package: "com.app.core"},
+	}
+	jfc := coupling.Build(jroot, jfiles).FileCoupling()
+	y, yok := jfc["Y.java"]
+	z, zok := jfc["Z.java"]
+	if !yok || !zok || y != z || y.Afferent != 1 {
+		t.Errorf("Y/Z share com.app.core (Ca=1): Y=%+v(%v) Z=%+v(%v)", y, yok, z, zok)
+	}
+
+	// Non-analysable root: no manifest, so nothing maps.
+	if got := coupling.Build(t.TempDir(), files).FileCoupling(); len(got) != 0 {
+		t.Errorf("non-analysable FileCoupling = %v, want empty", got)
+	}
+}
+
 func TestGoCycle(t *testing.T) {
 	root := t.TempDir()
 	write(t, filepath.Join(root, "go.mod"), "module m\n")
