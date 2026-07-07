@@ -63,6 +63,16 @@ for _, cyc := range g.Cycles() {
 (high I) — the fragile hubs where a refactor is riskiest. `Cycles()` returns
 strongly-connected components of size > 1, largest first.
 
+`FileCoupling()` maps each file's `Path` (as given to `Build`) to its node's
+Ca/Ce/I, so you can attribute node-level coupling back to individual files
+across **any** supported ecosystem without reproducing its node rule:
+
+```go
+for path, c := range g.FileCoupling() {
+	fmt.Printf("%-40s Ca=%d Ce=%d\n", path, c.Afferent, c.Efferent)
+}
+```
+
 Convenience wrappers: `Analyze(root, files)` and `FindCycles(root, files)`.
 
 ## Install

@@ -48,6 +48,7 @@ type Graph struct {
 	analysable bool
 	efferent   map[string]map[string]bool // node -> set of nodes it imports
 	afferent   map[string]map[string]bool // node -> set of nodes importing it
+	fileNodes  map[string]string          // File.Path -> node it maps to (first-party files only)
 }
 
 // Build constructs the first-party import graph for the project rooted at root
@@ -63,8 +64,9 @@ func Build(root string, files []File) *Graph {
 		root = "."
 	}
 	g := &Graph{
-		efferent: map[string]map[string]bool{},
-		afferent: map[string]map[string]bool{},
+		efferent:  map[string]map[string]bool{},
+		afferent:  map[string]map[string]bool{},
+		fileNodes: map[string]string{},
 	}
 	ad := adapterFor(root)
 	module, ok := ad.prepare(root)
@@ -97,6 +99,7 @@ func Build(root string, files []File) *Graph {
 			continue
 		}
 		fileNode[i] = node
+		g.fileNodes[f.Path] = node
 		nodes[node] = true
 		touch(node)
 	}
@@ -157,6 +160,29 @@ func (g *Graph) Coupling() []Coupling {
 		}
 		return a.Package < b.Package
 	})
+	return out
+}
+
+// FileCoupling returns the coupling profile of each first-party file's node,
+// keyed by the File.Path that was passed to [Build]. Files that mapped to no
+// first-party node — an unmatched language, an empty/external node, or a file
+// under a non-analysable root — are absent from the map.
+//
+// It lets a caller attribute node-level Ca/Ce/instability back to individual
+// files (many files may share one node's profile) without reproducing the
+// ecosystem's node rule. Use the same Path form (absolute or relative) you gave
+// Build; the returned keys echo it verbatim.
+func (g *Graph) FileCoupling() map[string]Coupling {
+	byNode := make(map[string]Coupling, len(g.efferent))
+	for _, c := range g.Coupling() {
+		byNode[c.Package] = c
+	}
+	out := make(map[string]Coupling, len(g.fileNodes))
+	for path, node := range g.fileNodes {
+		if c, ok := byNode[node]; ok {
+			out[path] = c
+		}
+	}
 	return out
 }
 
